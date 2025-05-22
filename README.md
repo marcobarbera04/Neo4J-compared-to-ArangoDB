@@ -12,3 +12,9 @@ Start the docker environment
 cd docker
 docker-compose -f docker-compose.yml up -d
 ```
+
+## Access the databases
+
+ArangoDB: http://localhost:8529
+
+Neo4j: http://localhost:7474
