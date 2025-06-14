@@ -6,7 +6,7 @@ import random
 faker = Faker()
 Faker.seed(42)  # Per risultati riproducibili
 
-# **1. Creazione delle liste per i dati**
+# Creazione delle liste per i dati**
 persone = []
 banche = []
 conti_bancari = []
@@ -17,11 +17,11 @@ relazioni_effettuata_da = []
 relazioni_invia_a = []
 relazioni_collega = []
 
-# **2. Generazione delle Banche**
+# Generazione delle Banche**
 for i in range(5):  # Numero di banche
     banche.append([f"B{i+1}", faker.company(), faker.country()])
 
-# **3. Generazione delle Persone e Conti Bancari**
+# Generazione delle Persone e Conti Bancari**
 for i in range(20):  # Numero di persone
     persona_id = f"P{i+1}"
     persone.append([persona_id, faker.first_name(), faker.last_name(), faker.country(), faker.city(), faker.email(), faker.phone_number()])
@@ -36,7 +36,7 @@ for i in range(20):  # Numero di persone
         relazioni_ha_conto.append([persona_id, conto_id])
         relazioni_offre_conto.append([banca_id, conto_id])
 
-# **4. Generazione delle Transazioni**
+# Generazione delle Transazioni**
 for i in range(50):  # Numero di transazioni
     transazione_id = f"T{i+1}"
     importo = round(random.uniform(100, 10000), 2)
@@ -48,13 +48,13 @@ for i in range(50):  # Numero di transazioni
     relazioni_effettuata_da.append([transazione_id, origine])
     relazioni_invia_a.append([transazione_id, destinazione])
 
-# **5. Generazione delle relazioni tra transazioni**
+# Generazione delle relazioni tra transazioni**
 for _ in range(10):
     t1 = random.choice(transazioni)[0]
     t2 = random.choice([t[0] for t in transazioni if t[0] != t1])
     relazioni_collega.append([t1, t2])
 
-# **6. Salvataggio in CSV**
+# Salvataggio in CSV**
 datasets = {
     "persone.csv": persone,
     "banche.csv": banche,

@@ -6,6 +6,9 @@ services:
       - "8529:8529"
     environment:
       - ARANGO_ROOT_PASSWORD=
+    volumes:
+      - arangodb_data:/data
+      - ./import:/var/lib/arangodb/import
     restart: unless-stopped
 
   neo4j:
@@ -23,3 +26,4 @@ services:
 
 volumes:
   neo4j_data:
+  arangodb_data:
