@@ -11,7 +11,7 @@ output_dir = Path("import")
 output_dir.mkdir(exist_ok=True)
 
 NUM_PERSONE = 27125
-NUM_CARTE = 25250
+NUM_CARTE = NUM_PERSONE  # Ora il numero di carte è uguale al numero di persone
 NUM_CONTI = 45000
 NUM_NAZIONI = 45
 NUM_BANCHE = 180
@@ -62,16 +62,28 @@ def genera_persone():
 
 def genera_carte_identita(persone):
     carte = []
-    for persona in persone:
+    num_carte_totali = len(persone)  # Ora è uguale al numero di persone
+    
+    # Creiamo una lista di numeri di carte con alcuni duplicati
+    num_carte_uniche = int(num_carte_totali * 0.7)  # Il 70% delle carte avrà numeri univoci
+    numeri_carte = [fake.bothify(text='??######') for _ in range(num_carte_uniche)]
+    
+    for _ in range(num_carte_totali - num_carte_uniche):  # Il restante 30% riutilizza numeri esistenti
+        numeri_carte.append(random.choice(numeri_carte[:num_carte_uniche]))
+    
+    random.shuffle(numeri_carte)  # Mescola per avere distribuzione più naturale
+
+    for persona, numero_carta in zip(persone, numeri_carte):
         rilascio = fake.date_between(start_date='-10y', end_date='-1y')
         scadenza = fake.date_between(start_date='today', end_date='+10y')
         carte.append({
             'codice_fiscale': persona['codice_fiscale'],
-            'numero': fake.bothify(text='??######'),
+            'numero': numero_carta,  # Alcuni numeri saranno duplicati
             'data_rilascio': rilascio.isoformat(),
             'data_scadenza': scadenza.isoformat(),
-            'ente_emittente': f"Comune di {fake.city()}"
+            'ente_emittente': f"Comune di {fake.city()}"  # Questo cambia per ogni carta
         })
+    
     return carte
 
 def genera_conti_corrente(persone):
@@ -94,7 +106,6 @@ def genera_conti_corrente(persone):
             'codice_fiscale': persona["codice_fiscale"]  # Collega il conto a una persona
         })
     return conti
-
 
 def salva_csv(filename, data, headers):
     filepath = output_dir / filename
