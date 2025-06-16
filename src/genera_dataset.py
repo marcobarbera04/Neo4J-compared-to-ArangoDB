@@ -18,12 +18,17 @@ NUM_BANCHE = 180
 
 def genera_nazioni():
     nazioni = []
-    for _ in range(NUM_NAZIONI):
-        nazioni.append({
-            'nome': fake.country(),
-            'tasso_inflazione': round(random.uniform(0.5, 10.0), 2),
-            'popolazione': random.randint(500_000, 100_000_000)
-        })
+    nazioni_generate = set()
+    
+    while len(nazioni) < NUM_NAZIONI:
+        nome_nazione = fake.country()
+        if nome_nazione not in nazioni_generate:
+            nazioni_generate.add(nome_nazione)
+            nazioni.append({
+                'nome': nome_nazione,
+                'tasso_inflazione': round(random.uniform(0.5, 10.0), 2),
+                'popolazione': random.randint(500_000, 100_000_000)
+            })
     return nazioni
 
 def genera_banche():
