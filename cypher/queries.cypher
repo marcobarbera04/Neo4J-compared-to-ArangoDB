@@ -14,10 +14,11 @@ RETURN p;
 MATCH (p:Persona)-[r:HA_CONTO]->(c:Conto)-[r2:AFFILIATO]->(b:Banca)
 RETURN p, r, c, r2, b LIMIT 500;
 
-// Cercare tutti i conti correnti di persone che hanno carta d’identità duplicata di nazionalità Taiwan (possibile paradiso fiscale)
+// Cercare tutti i conti correnti di persone che hanno carta d’identità con numero uguale ma ente emittente diverso, di nazionalità Taiwan (possibile paradiso fiscale)
 MATCH (c:CartaIdentita)
 WITH c.numero AS numero, COLLECT(c) AS carte
 WHERE SIZE(carte) = 2  // Considera solo carte con esattamente due duplicati
+AND carte[0].ente_emittente <> carte[1].ente_emittente  // Controllo sulla data di emissione
 UNWIND carte AS carta
 MATCH (p:Persona)-[:HA_CARTA]->(carta)
 MATCH (p)-[:APPARTIENE_A]->(n:Nazione)
