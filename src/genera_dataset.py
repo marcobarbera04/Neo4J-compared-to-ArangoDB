@@ -68,27 +68,29 @@ def genera_persone():
 def genera_carte_identita(persone):
     carte = []
     num_carte_totali = len(persone)  # Ora è uguale al numero di persone
-    
-    # Creiamo una lista di numeri di carte con alcuni duplicati
-    num_carte_uniche = int(num_carte_totali * 0.7)  # Il 70% delle carte avrà numeri univoci
-    numeri_carte = [fake.bothify(text='??######') for _ in range(num_carte_uniche)]
-    
-    for _ in range(num_carte_totali - num_carte_uniche):  # Il restante 30% riutilizza numeri esistenti
-        numeri_carte.append(random.choice(numeri_carte[:num_carte_uniche]))
-    
-    random.shuffle(numeri_carte)  # Mescola per avere distribuzione più naturale
 
+    # Creiamo la lista di numeri univoci per il 70% delle carte
+    num_carte_uniche = int(num_carte_totali * 0.7)  
+    numeri_carte_unici = [fake.bothify(text='??######') for _ in range(num_carte_uniche)]
+
+    # Selezioniamo il 30% di questi numeri e li assegnamo ad altre carte (ogni numero viene duplicato una volta)
+    numeri_carte_duplicati = random.sample(numeri_carte_unici, num_carte_totali - num_carte_uniche)
+
+    # Creiamo la lista finale di numeri di carte
+    numeri_carte = numeri_carte_unici + numeri_carte_duplicati
+    random.shuffle(numeri_carte)  # Mescoliamo per ottenere una distribuzione più naturale
+
+    # Assegniamo i numeri di carta alle persone
     for persona, numero_carta in zip(persone, numeri_carte):
         rilascio = fake.date_between(start_date='-10y', end_date='-1y')
         scadenza = fake.date_between(start_date='today', end_date='+10y')
         carte.append({
             'codice_fiscale': persona['codice_fiscale'],
-            'numero': numero_carta,  # Alcuni numeri saranno duplicati
+            'numero': numero_carta,  # Ora ogni numero duplicato è presente al massimo in due carte
             'data_rilascio': rilascio.isoformat(),
             'data_scadenza': scadenza.isoformat(),
-            'ente_emittente': f"Comune di {fake.city()}"  # Questo cambia per ogni carta
+            'ente_emittente': f"Comune di {fake.city()}"
         })
-    
     return carte
 
 def genera_conti_corrente(persone):
