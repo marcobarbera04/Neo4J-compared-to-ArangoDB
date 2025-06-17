@@ -32,13 +32,9 @@ def esegui_query_n_volte(uri, user, password, numero_query, n):
     esegui_query(conn, query, parameters=None)
     elapsed_time = (time.time() - start_time) * 1000 # Convertire da secondi a millisecondi
 
-    conn.close
-
     # Appendo il risultato a freddo nella lista
     risultati.append(["a freddo", numero_query + 1, "{:.3f}".format(elapsed_time)])
 
-    # Aprire di nuovo connessione per eseguire n volte la query
-    conn = connessione(uri, user, password)
     for i in range(0,n):
         start_time = time.time()
         esegui_query(conn, query, parameters=None)
