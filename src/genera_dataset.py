@@ -25,6 +25,7 @@ def genera_nazioni():
         if nome_nazione not in nazioni_generate:
             nazioni_generate.add(nome_nazione)
             nazioni.append({
+                'uuid': fake.uuid4(),
                 'nome': nome_nazione,
                 'tasso_inflazione': round(random.uniform(0.5, 10.0), 2),
                 'popolazione': random.randint(500_000, 100_000_000)
@@ -37,6 +38,7 @@ def genera_banche():
     banche = []
     for _ in range(NUM_BANCHE):
         banche.append({
+            'uuid': fake.uuid4(),
             'nome': f"Banca {fake.company()}",
             'anno_fondazione': random.randint(1850, 2022),
             'tipo': random.choice(tipi),
@@ -52,7 +54,7 @@ def genera_persone():
         data_nascita = fake.date_of_birth(minimum_age=18, maximum_age=85)
         eta = datetime.date.today().year - data_nascita.year
         persone.append({
-            'id': fake.uuid4(),
+            'uuid': fake.uuid4(),
             'nome': fake.first_name(),
             'cognome': fake.last_name(),
             'sesso': random.choice(['M', 'F']),
@@ -85,6 +87,7 @@ def genera_carte_identita(persone):
         rilascio = fake.date_between(start_date='-10y', end_date='-1y')
         scadenza = fake.date_between(start_date='today', end_date='+10y')
         carte.append({
+            'uuid': fake.uuid4(),
             'codice_fiscale': persona['codice_fiscale'],
             'numero': numero_carta,  # Ora ogni numero duplicato è presente al massimo in due carte
             'data_rilascio': rilascio.isoformat(),
@@ -102,6 +105,7 @@ def genera_conti_corrente(persone):
         apertura = fake.date_between(start_date='-10y', end_date='-1y')
         chiusura = fake.date_between(start_date='-1y', end_date='today') if random.random() < 0.1 else ''
         conti.append({
+            'uuid': fake.uuid4(),
             'numero_conto': fake.random_number(digits=8, fix_len=True),
             'saldo': round(random.uniform(-5000, 50000), 2),
             'tipo_conto': random.choice(tipi_conto),

@@ -5,25 +5,11 @@ services:
     ports:
       - "8529:8529"
     environment:
-      - ARANGO_ROOT_PASSWORD=
+      - ARANGO_ROOT_PASSWORD=secret
     volumes:
       - arangodb_data:/data
-      - ./import:/var/lib/arangodb/import
-    restart: unless-stopped
-
-  neo4j:
-    image: neo4j
-    container_name: neo4j-instance
-    ports:
-      - "7474:7474"
-      - "7687:7687"
-    environment:
-      - NEO4J_AUTH=none
-    volumes:
-      - neo4j_data:/data
-      - ./import:/var/lib/neo4j/import
+      - ./import:/import
     restart: unless-stopped
 
 volumes:
-  neo4j_data:
   arangodb_data:
