@@ -73,13 +73,14 @@ MERGE (b)-[:SITUATA_IN]->(nazioneCasuale)
 RETURN count(*) AS bancheAggiornate;
 
 
-// Collegare persone ai conti correnti usando codice fiscale (MERGE per evitare duplicazioni)
-CALL apoc.periodic.iterate(
-  "LOAD CSV WITH HEADERS FROM 'file:///conti_corrente.csv' AS row RETURN row",
-  "MATCH (p:Persona {codice_fiscale: row.codice_fiscale}) MATCH (c:Conto {IBAN: row.IBAN})
-   MERGE (p)-[:HA_CONTO]->(c)",
-  {batchSize: 1000, parallel: true}
-);
+// Carica conti correnti
+LOAD CSV WITH HEADERS FROM 'file:///conti_corrente.csv' AS row
+RETURN row
+
+// Collega persona a conti con cf
+MATCH (p:Persona), (c:Conto)
+WHERE p.codice_fiscale = c.codice_fiscale
+MERGE (p)-[:HA_CONTO]->(c);
 
 // Collegare conti correnti alle banche casualmente (solo i conti senza banca)
 CALL apoc.periodic.iterate(
