@@ -2,7 +2,7 @@
 CALL apoc.periodic.iterate(
   "LOAD CSV WITH HEADERS FROM 'file:///nazioni.csv' AS row RETURN row",
   "MERGE (n:Nazione {nome: row.nome})
-   ON CREATE SET n.tasso_inflazione = toFloat(row.tasso_inflazione), n.popolazione = toInteger(row.popolazione)",
+   ON CREATE SET n.uuid = row.uuid, n.tasso_inflazione = toFloat(row.tasso_inflazione), n.popolazione = toInteger(row.popolazione)",
   {batchSize: 1000, parallel: true}
 );
 
@@ -10,7 +10,7 @@ CALL apoc.periodic.iterate(
 CALL apoc.periodic.iterate(
   "LOAD CSV WITH HEADERS FROM 'file:///banche.csv' AS row RETURN row",
   "MERGE (b:Banca {nome: row.nome})
-   ON CREATE SET b.anno_fondazione = toInteger(row.anno_fondazione), b.tipo = row.tipo, b.filiali = toInteger(row.filiali), 
+   ON CREATE SET b.uuid = row.uuid, b.anno_fondazione = toInteger(row.anno_fondazione), b.tipo = row.tipo, b.filiali = toInteger(row.filiali), 
    b.rating = row.rating, b.settore = row.settore",
   {batchSize: 1000, parallel: true}
 );
@@ -20,7 +20,7 @@ CALL apoc.periodic.iterate(
 CALL apoc.periodic.iterate(
   "LOAD CSV WITH HEADERS FROM 'file:///persone.csv' AS row RETURN row",
   "MERGE (p:Persona {codice_fiscale: row.codice_fiscale})
-   ON CREATE SET p.id = row.id, p.nome = row.nome, p.cognome = row.cognome, p.eta = toInteger(row.eta)",
+   ON CREATE SET p.uuid = row.uuid, p.nome = row.nome, p.cognome = row.cognome, p.eta = toInteger(row.eta)",
   {batchSize: 1000, parallel: true}
 );
 
@@ -29,7 +29,7 @@ CALL apoc.periodic.iterate(
   "LOAD CSV WITH HEADERS FROM 'file:///carte_identita.csv' AS row RETURN row",
   "MATCH (p:Persona {codice_fiscale: row.codice_fiscale})
    WHERE NOT (p)-[:HA_CARTA]->()
-   CREATE (p)-[:HA_CARTA]->(:CartaIdentita {numero: row.numero, ente_emittente: row.ente_emittente, 
+   CREATE (p)-[:HA_CARTA]->(:CartaIdentita {uuid: row.uuid, numero: row.numero, ente_emittente: row.ente_emittente, 
    data_rilascio: row.data_rilascio, data_scadenza: row.data_scadenza})",
   {batchSize: 1000, parallel: true}
 );
@@ -39,7 +39,7 @@ CALL apoc.periodic.iterate(
 CALL apoc.periodic.iterate(
   "LOAD CSV WITH HEADERS FROM 'file:///conti_corrente.csv' AS row RETURN row",
   "MERGE (c:Conto {IBAN: row.IBAN})
-   ON CREATE SET c.numero_conto = row.numero_conto, c.saldo = toFloat(row.saldo), c.tipo_conto = row.tipo_conto, 
+   ON CREATE SET c.uuid = row.uuid, c.numero_conto = row.numero_conto, c.saldo = toFloat(row.saldo), c.tipo_conto = row.tipo_conto, 
    c.data_apertura = row.data_apertura, c.valuta = row.valuta, c.limite_prelievo = toFloat(row.limite_prelievo), 
    c.codice_fiscale = row.codice_fiscale",
   {batchSize: 1000, parallel: true}
@@ -47,24 +47,31 @@ CALL apoc.periodic.iterate(
 
 
 // Collegare persone alle nazioni casualmente (solo per le persone che non hanno ancora una nazione)
-CALL apoc.periodic.iterate(
-  "
-  MATCH (p:Persona) WHERE NOT (p)-[:APPARTIENE_A]->()
-  WITH p MATCH (n:Nazione) 
-  RETURN p, n ORDER BY rand() LIMIT 1
-  ",
-  "
-  CREATE (p)-[:APPARTIENE_A]->(n)
-  ",
-  {batchSize: 1000, parallel: true}
-);
+MATCH (p:Persona)
+WHERE NOT (p)-[:APPARTIENE_A]->(:Nazione)
+WITH p
+CALL {
+  WITH p
+  MATCH (n:Nazione)
+  WITH n ORDER BY rand() LIMIT 1
+  RETURN n AS nazioneCasuale
+}
+MERGE (p)-[:APPARTIENE_A]->(nazioneCasuale)
+RETURN count(*) AS personeAggiornate;
 
 // Collegare banche alle nazioni casualmente (solo per le banche senza nazione)
-CALL apoc.periodic.iterate(
-  "MATCH (b:Banca) WHERE NOT (b)-[:SITUATA_IN]->() MATCH (n:Nazione) RETURN b, n ORDER BY rand() LIMIT 1",
-  "CREATE (b)-[:SITUATA_IN]->(n)",
-  {batchSize: 1000, parallel: true}
-);
+MATCH (b:Banca)
+WHERE NOT (b)-[:SITUATA_IN]->(:Nazione)
+WITH b
+CALL {
+  WITH b
+  MATCH (n:Nazione)
+  WITH n ORDER BY rand() LIMIT 1
+  RETURN n AS nazioneCasuale
+}
+MERGE (b)-[:SITUATA_IN]->(nazioneCasuale)
+RETURN count(*) AS bancheAggiornate;
+
 
 // Collegare persone ai conti correnti usando codice fiscale (MERGE per evitare duplicazioni)
 CALL apoc.periodic.iterate(

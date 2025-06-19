@@ -5,7 +5,7 @@ from arango import ArangoClient
 ARANGO_URL = 'http://localhost:8529'
 USERNAME = 'root'
 PASSWORD = 'secret'
-DB_NAME = 'database50'
+DB_NAME = 'database25'
 COLLECTION_NAME = 'Conto'
 PRIMARY_KEY = 'uuid'
 IMPORT_FILE = 'conti.json'
@@ -41,5 +41,5 @@ def importa_banche_sequenziali(json_file):
                     print(f"Errore inserendo conto: {e}")
 
 # Esecuzione
-importa_banche_sequenziali('import/' + IMPORT_FILE)
+importa_banche_sequenziali('json/' + IMPORT_FILE)
 print("Importazione completata.")

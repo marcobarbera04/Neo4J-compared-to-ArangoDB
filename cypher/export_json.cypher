@@ -1,35 +1,35 @@
 // Esporta persone
 CALL apoc.export.json.query(
   "MATCH (n:Persona) RETURN n",
-  "file:///export/persona.json",
+  "file:///export/Persona.json",
   {useTypes: true, stream: false}
 );
 
 // Esporta banche
 CALL apoc.export.json.query(
   "MATCH (n:Banca) RETURN n",
-  "file:///export/banche.json",
+  "file:///export/Banca.json",
   {useTypes: true, stream: false}
 );
 
 // Esporta carte d'identita
 CALL apoc.export.json.query(
   "MATCH (n:CartaIdentita) RETURN n",
-  "file:///export/carte_identita.json",
+  "file:///export/CartaIdentita.json",
   {useTypes: true, stream: false}
 );
 
 // Esporta nazioni
 CALL apoc.export.json.query(
   "MATCH (n:Nazione) RETURN n",
-  "file:///export/nazione.json",
+  "file:///export/Nazione.json",
   {useTypes: true, stream: false}
 );
 
 // Esporta conti
 CALL apoc.export.json.query(
   "MATCH (n:Conto) RETURN n",
-  "file:///export/conti.json",
+  "file:///export/Conti.json",
   {useTypes: true, stream: false}
 );
 
