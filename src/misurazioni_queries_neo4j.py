@@ -3,6 +3,11 @@ import sys
 import csv
 from neo4j import GraphDatabase
 
+# Configurazione del database
+URI = "neo4j://127.0.0.1:7687"
+USER = "neo4j"
+PASSWORD = "database"
+
 queries = ["MATCH (p:Persona) WHERE p.eta >= 25 AND p.eta <= 50 AND (p.nome STARTS WITH 'A' OR p.nome STARTS WITH 'M') RETURN p;", 
            "MATCH (p:Persona)-[:HA_CONTO]->(c:Conto)-[:AFFILIATO]->(b:Banca) WITH p, COLLECT(DISTINCT b) AS banche WHERE SIZE(banche) > 1 RETURN p;", 
            "MATCH (c:CartaIdentita) WITH c.numero AS numero, COLLECT(c) AS carte WHERE SIZE(carte) = 2 AND carte[0].ente_emittente <> carte[1].ente_emittente UNWIND carte AS carta MATCH (p:Persona)-[:HA_CARTA]->(carta) MATCH (p)-[:APPARTIENE_A]->(n:Nazione) WHERE n.nome = 'Taiwan' MATCH (p)-[:HA_CONTO]->(conto:Conto) RETURN conto;",
@@ -20,7 +25,7 @@ def esegui_query_n_volte(uri, user, password, numero_query, n):
     query = queries[numero_query]
 
     # File per i tempi
-    filename = "tempi_esecuzione_" + str(numero_query + 1) + "_query.csv"
+    filename = "tempi_esecuzione_" + str(numero_query + 1) + "_query_neo4j.csv"
     
     # Lista per contenere i risultati 
     risultati = [["TIPO", "NUMERO QUERY", "TEMPO (ms)"]]
@@ -58,11 +63,6 @@ if __name__ == "__main__":
     if numero_query < 0 or numero_query > 3 :
         print("Il numero deve essere compreso tra 1 e 4")
         sys.exit(1)
-    
-    # Configurazione del database
-    URI = "neo4j://127.0.0.1:7687"
-    USER = "neo4j"
-    PASSWORD = "database"
 
     # Query di esempio
     print("Eseguo la query numero" + str(numero_query + 1))

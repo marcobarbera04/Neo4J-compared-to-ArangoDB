@@ -35,7 +35,7 @@ def esegui_query(db, query, bind_vars=None):
 
 def esegui_query_n_volte(uri, username, password, numero_query, n):
     query = queries[numero_query]
-    filename = f"tempi_esecuzione_{numero_query+1}_query.csv"
+    filename = "tempi_esecuzione_" + str(numero_query + 1) + "_query_arangoDB.csv"
     risultati = [["TIPO", "NUMERO QUERY", "TEMPO (ms)"]]
 
     db = connessione(uri, username, password)
