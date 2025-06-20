@@ -8,10 +8,45 @@ URI = "neo4j://127.0.0.1:7687"
 USER = "neo4j"
 PASSWORD = "database"
 
-queries = ["MATCH (p:Persona) WHERE p.eta >= 25 AND p.eta <= 50 AND (p.nome STARTS WITH 'A' OR p.nome STARTS WITH 'M') RETURN p;", 
-           "MATCH (p:Persona)-[:HA_CONTO]->(c:Conto)-[:AFFILIATO]->(b:Banca) WITH p, COLLECT(DISTINCT b) AS banche WHERE SIZE(banche) > 1 RETURN p;", 
-           "MATCH (c:CartaIdentita) WITH c.numero AS numero, COLLECT(c) AS carte WHERE SIZE(carte) = 2 AND carte[0].ente_emittente <> carte[1].ente_emittente UNWIND carte AS carta MATCH (p:Persona)-[:HA_CARTA]->(carta) MATCH (p)-[:APPARTIENE_A]->(n:Nazione) WHERE n.nome = 'Taiwan' MATCH (p)-[:HA_CONTO]->(conto:Conto) RETURN conto;",
-           "MATCH (p:Persona)-[:HA_CONTO]->(c:Conto)-[t:TRANSAZIONE]->(dest:Conto) WHERE t.data >= date() - duration('P1M') WITH p, COUNT(t) AS num_transazioni WHERE num_transazioni > 15 MATCH (p)-[:HA_CARTA]->(carta:CartaIdentita) MATCH (p)-[:APPARTIENE_A]->(n:Nazione) RETURN p, carta, n, num_transazioni;"]
+queries = [
+    """
+    MATCH (p:Persona)
+    WHERE p.eta >= 25 AND p.eta <= 50
+    AND (p.nome STARTS WITH "A" OR p.nome STARTS WITH "M")
+    RETURN p;   
+    """, 
+    """
+    MATCH (p:Persona)-[:HA_CONTO]->(c:Conto)-[:AFFILIATO]->(b:Banca)
+    WITH p, COLLECT(DISTINCT b) AS banche
+    WHERE SIZE(banche) > 5
+    RETURN p;
+    """,
+    """
+    MATCH (c:CartaIdentita)
+    WITH c.numero AS numero, COLLECT(c) AS carte
+    WHERE SIZE(carte) = 2  // Considera solo carte con esattamente due duplicati
+    AND carte[0].ente_emittente <> carte[1].ente_emittente  // Controllo sulla data di emissione
+    UNWIND carte AS carta
+    MATCH (p:Persona)-[:HA_CARTA]->(carta)
+    MATCH (p)-[:APPARTIENE_A]->(n:Nazione)
+    WHERE n.nome = "Fiji"
+    MATCH (p)-[:HA_CONTO]->(conto:Conto)
+    RETURN conto;   
+    """,
+    """
+    WITH date() AS oggi, date() - duration({months: 1}) AS un_mese_fa
+    MATCH (p:Persona)-[:HA_CONTO]->(c:Conto)-[t:TRANSAZIONE]->()
+    WHERE t.data >= un_mese_fa AND t.data <= oggi
+    WITH p, count(t) AS totale_transazioni_ultimo_mese
+    WHERE totale_transazioni_ultimo_mese > 13
+
+    OPTIONAL MATCH (p)-[:APPARTIENE_A]->(n:Nazione)
+    OPTIONAL MATCH (p)-[:HA_CARTA]->(ci:CartaIdentita)
+
+    RETURN p, n.nome AS nazionalita, ci.numero AS numero_carta_identita, totale_transazioni_ultimo_mese
+    ORDER BY totale_transazioni_ultimo_mese DESC    
+    """
+    ]
 
 def connessione(uri, user, password):
     return GraphDatabase.driver(uri, auth=(user, password))

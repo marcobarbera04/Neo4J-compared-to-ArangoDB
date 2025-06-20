@@ -75,12 +75,9 @@ RETURN count(*) AS bancheAggiornate;
 
 // Carica conti correnti
 LOAD CSV WITH HEADERS FROM 'file:///conti_corrente.csv' AS row
-RETURN row
-
-// Collega persona a conti con cf
 MATCH (p:Persona), (c:Conto)
-WHERE p.codice_fiscale = c.codice_fiscale
-MERGE (p)-[:HA_CONTO]->(c);
+WHERE p.codice_fiscale = row.codice_fiscale AND c.codice_fiscale = row.codice_fiscale
+MERGE (p)-[:HA_CONTO]->(c)
 
 // Collegare conti correnti alle banche casualmente (solo i conti senza banca)
 CALL apoc.periodic.iterate(
@@ -90,23 +87,14 @@ CALL apoc.periodic.iterate(
 );
 
 // Creare transazioni tra conti correnti
-// Versione ottimizzata per database più grandi
-CALL apoc.periodic.iterate(
-  "
-  MATCH (c1:Conto)
-  WHERE NOT (c1)-[:TRANSAZIONE]->()
-  RETURN c1
-  ",
-  "
-  MATCH (c2:Conto)
-  WHERE c1 <> c2
-  WITH c1, COLLECT(c2) AS destinatari_possibili
-  UNWIND range(1, toInteger(rand() * 16) + 5) AS i
-  WITH c1, destinatari_possibili[toInteger(rand() * size(destinatari_possibili))] AS destinatario
-  CREATE (c1)-[:TRANSAZIONE {
-    importo: round(rand() * 5000, 2),
-    data: date(datetime() - duration({days: toInteger(rand() * 365)}))
-  }]->(destinatario)
-  ",
-  {batchSize: 100, parallel: false}
-)
+MATCH (c1:Conto)
+WHERE NOT (c1)-[:TRANSAZIONE]->()
+WITH c1
+MATCH (c2:Conto)
+WHERE c1 <> c2
+WITH c1, COLLECT(c2) AS destinatari_possibili
+WITH c1, destinatari_possibili[toInteger(rand() * size(destinatari_possibili))] AS destinatario
+CREATE (c1)-[:TRANSAZIONE {
+  importo: round(rand() * 5000, 2),
+  data: date(datetime() - duration({days: toInteger(rand() * 365)}))
+}]->(destinatario)

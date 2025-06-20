@@ -11,16 +11,12 @@ URI = "http://127.0.0.1:8529"
 
 queries = [
     """
-    query1
     """,
     """
-    query2
     """,
     """
-    query3
     """,
     """
-    query4
     """
 ]
 
