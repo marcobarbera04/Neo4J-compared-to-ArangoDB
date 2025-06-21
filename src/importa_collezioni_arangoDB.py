@@ -5,10 +5,10 @@ from arango import ArangoClient
 ARANGO_URL = 'http://localhost:8529'
 USERNAME = 'root'
 PASSWORD = 'secret'
-DB_NAME = 'database25'
-COLLECTION_NAME = 'Conto'
+DB_NAME = 'database50'
+COLLECTION_NAME = 'Banca'
 PRIMARY_KEY = 'uuid'
-IMPORT_FILE = 'conti.json'
+IMPORT_FILE = 'Banca.json'
 
 # Connessione ad Arango
 client = ArangoClient()

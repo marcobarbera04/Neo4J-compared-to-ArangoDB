@@ -2,15 +2,15 @@ import json
 from arango import ArangoClient
 
 # Configurazione ArangoDB
-USERNAME = 'root'
-PASSWORD = 'secret'
-DB_NAME = 'database25'
+USERNAME = ''
+PASSWORD = ''
+DB_NAME = ''
 
-ENTITY_FROM = "Banca"
-ENTITY_TO = "Nazione"
+ENTITY_FROM = ""
+ENTITY_TO = ""
 PRIMARY_KEY = "uuid"
-IMPORT_FILE = "SITUATA_IN.json"
-EDGE_COLLECTION = "SITUATA_IN"
+IMPORT_FILE = ".json"
+EDGE_COLLECTION = ""
 
 # Connessione al database
 client = ArangoClient()

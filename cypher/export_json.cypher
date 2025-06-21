@@ -29,7 +29,7 @@ CALL apoc.export.json.query(
 // Esporta conti
 CALL apoc.export.json.query(
   "MATCH (n:Conto) RETURN n",
-  "file:///export/Conti.json",
+  "file:///export/Conto.json",
   {useTypes: true, stream: false}
 );
 
