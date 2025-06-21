@@ -2,6 +2,7 @@ import json
 from arango import ArangoClient
 
 # Configurazione ArangoDB
+ARANGO_URL = 'http://localhost:8529'
 USERNAME = ''
 PASSWORD = ''
 DB_NAME = ''
@@ -13,7 +14,7 @@ IMPORT_FILE = ".json"
 EDGE_COLLECTION = ""
 
 # Connessione al database
-client = ArangoClient()
+client = ArangoClient(hosts=ARANGO_URL)
 db = client.db(DB_NAME, username=USERNAME, password=PASSWORD)
 
 # Nome del graph e edge collection
@@ -21,7 +22,7 @@ graph = db.graph('bank_graph')
 EDGE_COLLECTION = graph.edge_collection(EDGE_COLLECTION)
 
 # Caricamento del file
-with open('json/' + IMPORT_FILE, 'r') as f:
+with open('json' + IMPORT_FILE, 'r') as f:
     for line in f:
         data = json.loads(line)
         relazione = data['r']

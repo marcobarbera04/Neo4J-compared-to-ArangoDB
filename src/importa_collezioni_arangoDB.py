@@ -3,15 +3,16 @@ from arango import ArangoClient
 
 # Configurazione ArangoDB
 ARANGO_URL = 'http://localhost:8529'
-USERNAME = 'root'
-PASSWORD = 'secret'
-DB_NAME = 'database50'
-COLLECTION_NAME = 'Banca'
+USERNAME = ''
+PASSWORD = ''
+DB_NAME = ''
+
+COLLECTION_NAME = ''
 PRIMARY_KEY = 'uuid'
-IMPORT_FILE = 'Banca.json'
+IMPORT_FILE = '.json'
 
 # Connessione ad Arango
-client = ArangoClient()
+client = ArangoClient(hosts=ARANGO_URL)
 db = client.db(DB_NAME, username=USERNAME, password=PASSWORD)
 
 # Crea collezione se serve
