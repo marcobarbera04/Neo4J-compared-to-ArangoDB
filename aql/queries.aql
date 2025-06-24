@@ -1,73 +1,86 @@
-// Cercare tutte le persone tra i 25 e 50 anni con il nome che inizia per A o M per lo scopo di conoscere il cliente (know your customer).
+// [1] Cercare tutte le persone tra i 25 e 50 anni con il nome che inizia per A o M per lo scopo di conoscere il cliente (know your customer).
+// Indice composto su eta + nome db.Persona.ensureIndex({type: "persistent", fields: ["eta", "nome"], name: "idx_persona_eta_nome"});
 FOR p IN Persona
-  FILTER p.eta >= 25 AND p.eta <= 50
+FILTER p.eta >= 25 AND p.eta <= 50
     AND (STARTS_WITH(p.nome, "A") OR STARTS_WITH(p.nome, "M"))
-  RETURN p
+RETURN p
 
-// Cercare le persone che hanno più di 5 conti bancari associati, a banche diverse.
-FOR p IN Persona
-  LET banche = UNIQUE(
-    FOR v, e, p1 IN 2..2 OUTBOUND p HA_CONTO, AFFILIATO
-      FILTER IS_SAME_COLLECTION("Banca", v)
-      RETURN v._id
-  )
-  FILTER LENGTH(banche) > 5
-  RETURN p
+// [2]
+FOR c IN Conto
+  FILTER c.limite_prelievo > 1800
+  FILTER c.saldo > 45000
+  FILTER c.valuta != "USD"
 
+  RETURN MERGE(c, {
+    _sospetto: true,
+    _motivi: [
+      "limite_prelievo_alto",
+      "saldo_elevato",
+      "valuta_non_USD"
+    ]
+  })
 
-// Cercare tutti i conti correnti di persone che hanno carta d’identità con numero uguale ma ente emittente diverso, di nazionalità Fiji (possibile paradiso fiscale)
-LET carteDuplicate = (
+// [3]
+// Prima calcoliamo i numeri sospetti (carte con più enti emittenti)
+LET numeriSospetti = (
   FOR c IN CartaIdentita
-    COLLECT numero = c.numero INTO carte = c
-    FILTER LENGTH(carte) == 2 AND carte[0].ente_emittente != carte[1].ente_emittente
-    RETURN carte
+    COLLECT numero = c.numero INTO carte
+    FILTER COUNT_DISTINCT(carte[*].c.ente_emittente) > 1
+    RETURN numero
 )
-FOR carta IN FLATTEN(carteDuplicate)
-  FOR v1, e1 IN INBOUND carta HA_CARTA
-    FILTER IS_SAME_COLLECTION("Persona", v1)
-    FOR v2, e2 IN OUTBOUND v1 APPARTIENE_A
-      FILTER v2.nome == "Fiji"
-      FOR conto IN OUTBOUND v1 HA_CONTO
-        RETURN conto
 
-// ATTENZIONE (restituisce 3 TRANSAZIONE in meno rispetto a neo4j forse mancano transazioni)
-// Cercare le persone che sono state coinvolte in almeno 14 transazioni nell'arco di 1 mese per tutti i conti bancari associati a quella persona e mostrare la carta d’identità e la nazione.
+// Poi troviamo le nazioni target (Fiji)
+LET targetNazioni = (FOR n IN Nazione FILTER n.nome == "Fiji" RETURN n._id)
+
+// Infine eseguiamo la query principale
+FOR c IN CartaIdentita
+  FILTER c.numero IN numeriSospetti
+  FOR persona IN INBOUND c HA_CARTA
+    FILTER LENGTH(
+      FOR nid IN targetNazioni
+        FOR edge IN APPARTIENE_A
+          FILTER edge._from == persona._id AND edge._to == nid
+          LIMIT 1
+          RETURN 1
+    ) > 0
+    FOR conto IN OUTBOUND persona HA_CONTO
+      RETURN conto
+
+// [4] Cercare le persone che sono state coinvolte in almeno 13 transazioni nell'arco di 1 mese per tutti i conti bancari associati a quella persona e mostrare la carta d’identità e la nazione.
 LET unMeseFa = DATE_SUBTRACT(DATE_NOW(), 1, "month")
+LET unMeseFaStr = DATE_FORMAT(unMeseFa, "%yyyy-%mm-%ddT%hh:%ii:%ssZ")
 
 FOR persona IN Persona
-  LET conti = (
+  // Conta le transazioni recenti in uscita da tutti i conti della persona
+  LET transazioniRecentiCount = LENGTH(
     FOR ha_conto IN HA_CONTO
       FILTER ha_conto._from == persona._id
-      FOR conto IN Conto
-        FILTER conto._id == ha_conto._to
-        RETURN conto._id
-  )
-  
-  LET transazioniRecenti = (
-    FOR contoId IN conti
       FOR transazione IN TRANSAZIONE
-        FILTER transazione._from == contoId
-          AND DATE_ISO8601(transazione.data) >= unMeseFa
-        RETURN transazione
+        FILTER transazione._from == ha_conto._to
+          AND transazione.data >= unMeseFaStr
+        LIMIT 14  // Early abort: se superiamo 13 non serve contare oltre
+        RETURN 1
   )
 
-  FILTER LENGTH(transazioniRecenti) > 13
+  FILTER transazioniRecentiCount > 13
 
-  LET carta = (
+  // Recupera la carta d’identità (primo match)
+  LET carta = FIRST(
     FOR ha_carta IN HA_CARTA
       FILTER ha_carta._from == persona._id
       FOR cartaIdentita IN CartaIdentita
         FILTER cartaIdentita._id == ha_carta._to
         RETURN cartaIdentita
-  )[0]
+  )
 
-  LET nazione = (
+  // Recupera la nazione (primo match)
+  LET nazione = FIRST(
     FOR appartiene IN APPARTIENE_A
       FILTER appartiene._from == persona._id
       FOR n IN Nazione
         FILTER n._id == appartiene._to
         RETURN n
-  )[0]
+  )
 
   RETURN {
     persona: {
@@ -75,7 +88,7 @@ FOR persona IN Persona
       cognome: persona.cognome,
       codice_fiscale: persona.codice_fiscale
     },
-    transazioni_ultimo_mese: LENGTH(transazioniRecenti),
+    transazioni_ultimo_mese: transazioniRecentiCount,
     carta_identita: carta,
     nazione: nazione
   }
