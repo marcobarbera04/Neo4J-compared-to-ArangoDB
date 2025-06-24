@@ -7,19 +7,10 @@ from arango import ArangoClient
 # Configurazione ArangoDB
 USER = 'root'
 PASSWORD = 'secret'
-DB_NAME = ''
+DB_NAME = 'database75'
 URI = "http://127.0.0.1:8529"
 
-queries = [
-    """
-    """,
-    """
-    """,
-    """
-    """,
-    """
-    """
-]
+queries = []
 
 def connessione(uri, username, password):
     client = ArangoClient(hosts=uri)
@@ -44,7 +35,7 @@ if __name__ == "__main__":
     query = queries[numero_query]
 
     # File per i tempi
-    filename = "tempi_esecuzione_" + str(numero_query + 1) + "_query_arangoDB_freddo.csv"
+    filename = "tempi_query_" + str(numero_query + 1) + "_arangoDB_freddo.csv"
 
     # Lista per contenere i risultati 
     risultati = [["TIPO", "NUMERO QUERY", "TEMPO (ms)"]]

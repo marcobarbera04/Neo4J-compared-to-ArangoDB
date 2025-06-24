@@ -6,17 +6,107 @@ from arango import ArangoClient
 # Configurazione ArangoDB
 USER = 'root'
 PASSWORD = 'secret'
-DB_NAME = 'database25'
+DB_NAME = 'database100'
 URI = "http://127.0.0.1:8529"
 
 queries = [
     """
+    FOR p IN Persona
+    FILTER p.eta >= 25 AND p.eta <= 50
+        AND (STARTS_WITH(p.nome, "A") OR STARTS_WITH(p.nome, "M"))
+    RETURN p
     """,
+
     """
+FOR c IN Conto
+  FILTER c.limite_prelievo > 1800
+  FILTER c.saldo > 45000
+  FILTER c.valuta != "USD"
+
+  RETURN MERGE(c, {
+    _sospetto: true,
+    _motivi: [
+      "limite_prelievo_alto",
+      "saldo_elevato",
+      "valuta_non_USD"
+    ]
+  })
     """,
+
     """
+// Prima calcoliamo i numeri sospetti (carte con più enti emittenti)
+LET numeriSospetti = (
+  FOR c IN CartaIdentita
+    COLLECT numero = c.numero INTO carte
+    FILTER COUNT_DISTINCT(carte[*].c.ente_emittente) > 1
+    RETURN numero
+)
+
+// Poi troviamo le nazioni target (Fiji)
+LET targetNazioni = (FOR n IN Nazione FILTER n.nome == "Fiji" RETURN n._id)
+
+// Infine eseguiamo la query principale
+FOR c IN CartaIdentita
+  FILTER c.numero IN numeriSospetti
+  FOR persona IN INBOUND c HA_CARTA
+    FILTER LENGTH(
+      FOR nid IN targetNazioni
+        FOR edge IN APPARTIENE_A
+          FILTER edge._from == persona._id AND edge._to == nid
+          LIMIT 1
+          RETURN 1
+    ) > 0
+    FOR conto IN OUTBOUND persona HA_CONTO
+      RETURN conto
     """,
+
     """
+// Cercare le persone che sono state coinvolte in almeno 13 transazioni nell'arco di 1 mese per tutti i conti bancari associati a quella persona e mostrare la carta d’identità e la nazione.
+LET unMeseFa = DATE_SUBTRACT(DATE_NOW(), 1, "month")
+LET unMeseFaStr = DATE_FORMAT(unMeseFa, "%yyyy-%mm-%ddT%hh:%ii:%ssZ")
+
+FOR persona IN Persona
+  // Conta le transazioni recenti in uscita da tutti i conti della persona
+  LET transazioniRecentiCount = LENGTH(
+    FOR ha_conto IN HA_CONTO
+      FILTER ha_conto._from == persona._id
+      FOR transazione IN TRANSAZIONE
+        FILTER transazione._from == ha_conto._to
+          AND transazione.data >= unMeseFaStr
+        LIMIT 14  // Early abort: se superiamo 13 non serve contare oltre
+        RETURN 1
+  )
+
+  FILTER transazioniRecentiCount > 13
+
+  // Recupera la carta d’identità (primo match)
+  LET carta = FIRST(
+    FOR ha_carta IN HA_CARTA
+      FILTER ha_carta._from == persona._id
+      FOR cartaIdentita IN CartaIdentita
+        FILTER cartaIdentita._id == ha_carta._to
+        RETURN cartaIdentita
+  )
+
+  // Recupera la nazione (primo match)
+  LET nazione = FIRST(
+    FOR appartiene IN APPARTIENE_A
+      FILTER appartiene._from == persona._id
+      FOR n IN Nazione
+        FILTER n._id == appartiene._to
+        RETURN n
+  )
+
+  RETURN {
+    persona: {
+      nome: persona.nome,
+      cognome: persona.cognome,
+      codice_fiscale: persona.codice_fiscale
+    },
+    transazioni_ultimo_mese: transazioniRecentiCount,
+    carta_identita: carta,
+    nazione: nazione
+  }
     """
 ]
 
@@ -26,30 +116,28 @@ def connessione(uri, username, password):
     return db
 
 def esegui_query(db, query, bind_vars=None):
-    cursor = db.aql.execute(query, bind_vars=bind_vars)
-    return cursor  # Cursor da iterare
+    cursor = db.aql.execute(query, bind_vars=bind_vars, stream=True)
+    cursor.close()
+    return None
 
 def esegui_query_n_volte(uri, username, password, numero_query, n):
     query = queries[numero_query]
-    filename = "tempi_esecuzione_" + str(numero_query + 1) + "_query_arangoDB.csv"
+    filename = "tempi_query_" + str(numero_query + 1) + "_arangoDB.csv"
     risultati = [["TIPO", "NUMERO QUERY", "TEMPO (ms)"]]
 
     db = connessione(uri, username, password)
 
-    # Prima esecuzione a freddo
-    start_time = time.perf_counter()
-    list(esegui_query(db, query))
-    end_time = time.perf_counter()
-    elapsed_time = (end_time - start_time) * 1000
-    risultati.append(["a freddo", numero_query+1, f"{elapsed_time:.3f}"])
+    # Prima esecuzione non registrata
+    esegui_query(db, query)
 
     for i in range(n):
         start_time = time.perf_counter()
-        list(esegui_query(db, query))
+        esegui_query(db, query)
         end_time = time.perf_counter()
         elapsed_time = (end_time - start_time) * 1000
         risultati.append(["iterativa", numero_query+1, f"{elapsed_time:.3f}"])
 
+    #db.connection.close()
     with open(filename, mode="w", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
         writer.writerows(risultati)

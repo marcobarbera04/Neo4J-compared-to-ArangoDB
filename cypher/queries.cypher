@@ -1,32 +1,50 @@
-// Cercare tutte le persone tra i 25 e 50 anni con il nome che inizia per A o M per lo scopo di conoscere il cliente (know your customer).
+// [1]
 MATCH (p:Persona)
 WHERE p.eta >= 25 AND p.eta <= 50
-AND (p.nome STARTS WITH "A" OR p.nome STARTS WITH "M")
-RETURN p;
+  AND (p.nome STARTS WITH 'A' OR p.nome STARTS WITH 'M')
+RETURN p
 
-// Cercare le persone che hanno più di 5 conti bancari associati, a banche diverse.
-MATCH (p:Persona)-[:HA_CONTO]->(c:Conto)-[:AFFILIATO]->(b:Banca)
-WITH p, COLLECT(DISTINCT b) AS banche
-WHERE SIZE(banche) > 5
-RETURN p;
+// [2]
+MATCH (c:Conto)
+WHERE c.limite_prelievo > 1800
+  AND c.saldo > 45000
+  AND c.valuta <> 'USD'
+SET c._sospetto = true,
+    c._motivi = [
+      'limite_prelievo_alto',
+      'saldo_elevato',
+      'valuta_non_USD'
+    ]
+RETURN c
 
-// Per vedere effettivamente vedere le relazioni tra persone -> conti -> banche
-MATCH (p:Persona)-[r:HA_CONTO]->(c:Conto)-[r2:AFFILIATO]->(b:Banca)
-RETURN p, r, c, r2, b LIMIT 500;
+// [3]
+// Prima calcoliamo i numeri sospetti (carte con più enti emittenti)
+WITH [numero IN COLLECT {
+    MATCH (c:CartaIdentita)
+    WITH c.numero AS numero, COLLECT(DISTINCT c.ente_emittente) AS enti
+    WHERE SIZE(enti) > 1
+    RETURN numero
+}] AS numeriSospetti
 
-// Cercare tutti i conti correnti di persone che hanno carta d’identità con numero uguale ma ente emittente diverso, di nazionalità Fiji (possibile paradiso fiscale)
+// Poi troviamo le nazioni target (Fiji)
+WITH numeriSospetti, COLLECT {
+    MATCH (n:Nazione)
+    WHERE n.nome = "Fiji"
+    RETURN n
+} AS targetNazioni
+
+// Infine eseguiamo la query principale
 MATCH (c:CartaIdentita)
-WITH c.numero AS numero, COLLECT(c) AS carte
-WHERE SIZE(carte) = 2  // Considera solo carte con esattamente due duplicati
-AND carte[0].ente_emittente <> carte[1].ente_emittente  // Controllo sulla data di emissione
-UNWIND carte AS carta
-MATCH (p:Persona)-[:HA_CARTA]->(carta)
-MATCH (p)-[:APPARTIENE_A]->(n:Nazione)
-WHERE n.nome = "Fiji"
-MATCH (p)-[:HA_CONTO]->(conto:Conto)
-RETURN conto;
+WHERE c.numero IN numeriSospetti
+MATCH (persona:Persona)-[:HA_CARTA]->(c)
+WHERE EXISTS {
+    MATCH (persona)-[:APPARTIENE_A]->(n:Nazione)
+    WHERE n.nome = "Fiji"
+}
+MATCH (persona)-[:HA_CONTO]->(conto:Conto)
+RETURN conto
 
-// Cercare le persone che sono state coinvolte in almeno 15 transazioni nell'arco di 1 mese per tutti i conti bancari associati a quella persona e mostrare la carta d’identità e la nazione.
+// [4]
 WITH date() AS oggi, date() - duration({months: 1}) AS un_mese_fa
 MATCH (p:Persona)-[:HA_CONTO]->(c:Conto)-[t:TRANSAZIONE]->()
 WHERE t.data >= un_mese_fa AND t.data <= oggi
@@ -37,4 +55,3 @@ OPTIONAL MATCH (p)-[:APPARTIENE_A]->(n:Nazione)
 OPTIONAL MATCH (p)-[:HA_CARTA]->(ci:CartaIdentita)
 
 RETURN p, n.nome AS nazionalita, ci.numero AS numero_carta_identita, totale_transazioni_ultimo_mese
-ORDER BY totale_transazioni_ultimo_mese DESC

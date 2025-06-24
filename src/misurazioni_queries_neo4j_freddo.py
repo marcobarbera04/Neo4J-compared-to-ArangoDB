@@ -10,7 +10,7 @@ USER = "neo4j"
 PASSWORD = "database"
 
 queries = [
-        """
+    """
     MATCH (p:Persona)
     WHERE p.eta >= 25 AND p.eta <= 50
     AND (p.nome STARTS WITH "A" OR p.nome STARTS WITH "M")
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     query = queries[numero_query]
 
     # File per i tempi
-    filename = "tempi_esecuzione_" + str(numero_query + 1) + "_query_neo4j_freddo.csv"
+    filename = "tempi_query_" + str(numero_query + 1) + "_neo4j_freddo.csv"
     
     # Lista per contenere i risultati 
     risultati = [["TIPO", "NUMERO QUERY", "TEMPO (ms)"]]

@@ -10,41 +10,66 @@ PASSWORD = "database"
 
 queries = [
     """
-    MATCH (p:Persona)
-    WHERE p.eta >= 25 AND p.eta <= 50
-    AND (p.nome STARTS WITH "A" OR p.nome STARTS WITH "M")
-    RETURN p;   
-    """, 
-    """
-    MATCH (p:Persona)-[:HA_CONTO]->(c:Conto)-[:AFFILIATO]->(b:Banca)
-    WITH p, COLLECT(DISTINCT b) AS banche
-    WHERE SIZE(banche) > 5
-    RETURN p;
+MATCH (p:Persona)
+WHERE p.eta >= 25 AND p.eta <= 50
+  AND (p.nome STARTS WITH 'A' OR p.nome STARTS WITH 'M')
+RETURN p  
     """,
+
     """
+MATCH (c:Conto)
+WHERE c.limite_prelievo > 1800
+  AND c.saldo > 45000
+  AND c.valuta <> 'USD'
+SET c._sospetto = true,
+    c._motivi = [
+      'limite_prelievo_alto',
+      'saldo_elevato',
+      'valuta_non_USD'
+    ]
+RETURN c
+    """,
+
+    """
+// Prima calcoliamo i numeri sospetti (carte con più enti emittenti)
+WITH [numero IN COLLECT {
     MATCH (c:CartaIdentita)
-    WITH c.numero AS numero, COLLECT(c) AS carte
-    WHERE SIZE(carte) = 2  // Considera solo carte con esattamente due duplicati
-    AND carte[0].ente_emittente <> carte[1].ente_emittente  // Controllo sulla data di emissione
-    UNWIND carte AS carta
-    MATCH (p:Persona)-[:HA_CARTA]->(carta)
-    MATCH (p)-[:APPARTIENE_A]->(n:Nazione)
+    WITH c.numero AS numero, COLLECT(DISTINCT c.ente_emittente) AS enti
+    WHERE SIZE(enti) > 1
+    RETURN numero
+}] AS numeriSospetti
+
+// Poi troviamo le nazioni target (Fiji)
+WITH numeriSospetti, COLLECT {
+    MATCH (n:Nazione)
     WHERE n.nome = "Fiji"
-    MATCH (p)-[:HA_CONTO]->(conto:Conto)
-    RETURN conto;   
+    RETURN n
+} AS targetNazioni
+
+// Infine eseguiamo la query principale
+MATCH (c:CartaIdentita)
+WHERE c.numero IN numeriSospetti
+MATCH (persona:Persona)-[:HA_CARTA]->(c)
+WHERE EXISTS {
+    MATCH (persona)-[:APPARTIENE_A]->(n:Nazione)
+    WHERE n.nome = "Fiji"
+}
+MATCH (persona)-[:HA_CONTO]->(conto:Conto)
+RETURN conto 
     """,
+    
     """
-    WITH date() AS oggi, date() - duration({months: 1}) AS un_mese_fa
-    MATCH (p:Persona)-[:HA_CONTO]->(c:Conto)-[t:TRANSAZIONE]->()
-    WHERE t.data >= un_mese_fa AND t.data <= oggi
-    WITH p, count(t) AS totale_transazioni_ultimo_mese
-    WHERE totale_transazioni_ultimo_mese > 13
+WITH date() AS oggi, date() - duration({months: 1}) AS un_mese_fa
+MATCH (p:Persona)-[:HA_CONTO]->(c:Conto)-[t:TRANSAZIONE]->()
+WHERE t.data >= un_mese_fa AND t.data <= oggi
+WITH p, count(t) AS totale_transazioni_ultimo_mese
+WHERE totale_transazioni_ultimo_mese > 13
 
-    OPTIONAL MATCH (p)-[:APPARTIENE_A]->(n:Nazione)
-    OPTIONAL MATCH (p)-[:HA_CARTA]->(ci:CartaIdentita)
+OPTIONAL MATCH (p)-[:APPARTIENE_A]->(n:Nazione)
+OPTIONAL MATCH (p)-[:HA_CARTA]->(ci:CartaIdentita)
 
-    RETURN p, n.nome AS nazionalita, ci.numero AS numero_carta_identita, totale_transazioni_ultimo_mese
-    ORDER BY totale_transazioni_ultimo_mese DESC    
+RETURN p, n.nome AS nazionalita, ci.numero AS numero_carta_identita, totale_transazioni_ultimo_mese
+ORDER BY totale_transazioni_ultimo_mese DESC
     """
     ]
 
@@ -60,7 +85,7 @@ def esegui_query_n_volte(uri, user, password, numero_query, n):
     query = queries[numero_query]
 
     # File per i tempi
-    filename = "tempi_esecuzione_" + str(numero_query + 1) + "_query_neo4j.csv"
+    filename = "tempi_query_" + str(numero_query + 1) + "_neo4j.csv"
     
     # Lista per contenere i risultati 
     risultati = [["TIPO", "NUMERO QUERY", "TEMPO (ms)"]]
@@ -68,13 +93,8 @@ def esegui_query_n_volte(uri, user, password, numero_query, n):
     # Query a freddo (istanza del db appena avviata)
     conn = connessione(uri, user, password)
 
-    start_time = time.perf_counter()
+    # Prima esecuzione non registrata
     esegui_query(conn, query, parameters=None)
-    end_time = time.perf_counter()
-    elapsed_time = (end_time - start_time) * 1000   # Convertire da secondi a millisecondi
-
-    # Appendo il risultato a freddo nella lista
-    risultati.append(["a freddo", numero_query + 1, "{:.3f}".format(elapsed_time)])
 
     for i in range(0,n):
         start_time = time.perf_counter()    
