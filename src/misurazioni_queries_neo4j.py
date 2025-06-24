@@ -9,28 +9,24 @@ USER = "neo4j"
 PASSWORD = "database"
 
 queries = [
-    """
+"""
 MATCH (p:Persona)
 WHERE p.eta >= 25 AND p.eta <= 50
   AND (p.nome STARTS WITH 'A' OR p.nome STARTS WITH 'M')
 RETURN p  
-    """,
+""",
 
-    """
+"""
 MATCH (c:Conto)
-WHERE c.limite_prelievo > 1800
+WHERE (c.tipo_conto = "Investimento" OR c.tipo_conto = "Personale")
+  AND (c.valuta = "USD" OR c.valuta = "EUR")
+  AND c.limite_prelievo > 1000
   AND c.saldo > 45000
-  AND c.valuta <> 'USD'
-SET c._sospetto = true,
-    c._motivi = [
-      'limite_prelievo_alto',
-      'saldo_elevato',
-      'valuta_non_USD'
-    ]
+  AND date(c.data_apertura) >= date() - duration('P13M')
 RETURN c
-    """,
+""",
 
-    """
+"""
 // Prima calcoliamo i numeri sospetti (carte con più enti emittenti)
 WITH [numero IN COLLECT {
     MATCH (c:CartaIdentita)
@@ -56,9 +52,9 @@ WHERE EXISTS {
 }
 MATCH (persona)-[:HA_CONTO]->(conto:Conto)
 RETURN conto 
-    """,
+""",
     
-    """
+"""
 WITH date() AS oggi, date() - duration({months: 1}) AS un_mese_fa
 MATCH (p:Persona)-[:HA_CONTO]->(c:Conto)-[t:TRANSAZIONE]->()
 WHERE t.data >= un_mese_fa AND t.data <= oggi
@@ -70,8 +66,8 @@ OPTIONAL MATCH (p)-[:HA_CARTA]->(ci:CartaIdentita)
 
 RETURN p, n.nome AS nazionalita, ci.numero AS numero_carta_identita, totale_transazioni_ultimo_mese
 ORDER BY totale_transazioni_ultimo_mese DESC
-    """
-    ]
+"""
+]
 
 def connessione(uri, user, password):
     return GraphDatabase.driver(uri, auth=(user, password))

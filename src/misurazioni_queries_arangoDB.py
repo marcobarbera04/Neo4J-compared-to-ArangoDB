@@ -6,34 +6,28 @@ from arango import ArangoClient
 # Configurazione ArangoDB
 USER = 'root'
 PASSWORD = 'secret'
-DB_NAME = 'database100'
+DB_NAME = ''
 URI = "http://127.0.0.1:8529"
 
 queries = [
-    """
-    FOR p IN Persona
-    FILTER p.eta >= 25 AND p.eta <= 50
-        AND (STARTS_WITH(p.nome, "A") OR STARTS_WITH(p.nome, "M"))
-    RETURN p
-    """,
+"""
+FOR p IN Persona
+FILTER p.eta >= 25 AND p.eta <= 50
+    AND (STARTS_WITH(p.nome, "A") OR STARTS_WITH(p.nome, "M"))
+RETURN p
+""",
 
-    """
+"""
 FOR c IN Conto
-  FILTER c.limite_prelievo > 1800
-  FILTER c.saldo > 45000
-  FILTER c.valuta != "USD"
+  FILTER (c.tipo_conto == "Investimento" OR c.tipo_conto == "Personale")
+    AND (c.valuta == "USD" OR c.valuta == "EUR")
+    AND c.limite_prelievo > 1000
+    AND c.saldo > 45000
+    AND c.data_apertura >= DATE_SUBTRACT(DATE_NOW(), 13, "month")
+  RETURN c
+""",
 
-  RETURN MERGE(c, {
-    _sospetto: true,
-    _motivi: [
-      "limite_prelievo_alto",
-      "saldo_elevato",
-      "valuta_non_USD"
-    ]
-  })
-    """,
-
-    """
+"""
 // Prima calcoliamo i numeri sospetti (carte con più enti emittenti)
 LET numeriSospetti = (
   FOR c IN CartaIdentita
@@ -58,12 +52,13 @@ FOR c IN CartaIdentita
     ) > 0
     FOR conto IN OUTBOUND persona HA_CONTO
       RETURN conto
-    """,
+""",
 
-    """
+"""
 // Cercare le persone che sono state coinvolte in almeno 13 transazioni nell'arco di 1 mese per tutti i conti bancari associati a quella persona e mostrare la carta d’identità e la nazione.
-LET unMeseFa = DATE_SUBTRACT(DATE_NOW(), 1, "month")
-LET unMeseFaStr = DATE_FORMAT(unMeseFa, "%yyyy-%mm-%ddT%hh:%ii:%ssZ")
+// Convertiamo le date nel formato stringa YYYY-MM-DD per il confronto
+LET unMeseFaStr = DATE_FORMAT(DATE_SUBTRACT(DATE_NOW(), 1, "month"), "%yyyy-%mm-%dd")
+LET oggiStr = DATE_FORMAT(DATE_NOW(), "%yyyy-%mm-%dd")
 
 FOR persona IN Persona
   // Conta le transazioni recenti in uscita da tutti i conti della persona
@@ -73,13 +68,14 @@ FOR persona IN Persona
       FOR transazione IN TRANSAZIONE
         FILTER transazione._from == ha_conto._to
           AND transazione.data >= unMeseFaStr
-        LIMIT 14  // Early abort: se superiamo 13 non serve contare oltre
+          AND transazione.data <= oggiStr  // Aggiunto limite superiore
+        // Rimosso LIMIT 14 per conteggio accurato
         RETURN 1
   )
 
   FILTER transazioniRecentiCount > 13
 
-  // Recupera la carta d’identità (primo match)
+  // Recupera la carta d'identità (primo match)
   LET carta = FIRST(
     FOR ha_carta IN HA_CARTA
       FILTER ha_carta._from == persona._id
@@ -101,13 +97,11 @@ FOR persona IN Persona
     persona: {
       nome: persona.nome,
       cognome: persona.cognome,
-      codice_fiscale: persona.codice_fiscale
-    },
-    transazioni_ultimo_mese: transazioniRecentiCount,
-    carta_identita: carta,
-    nazione: nazione
+      codice_fiscale: persona.codice_fiscale,
+      uuid: persona.uuid
+      }
   }
-    """
+"""
 ]
 
 def connessione(uri, username, password):
@@ -122,7 +116,7 @@ def esegui_query(db, query, bind_vars=None):
 
 def esegui_query_n_volte(uri, username, password, numero_query, n):
     query = queries[numero_query]
-    filename = "tempi_query_" + str(numero_query + 1) + "_arangoDB.csv"
+    filename = "tempi_query_" + str(numero_query + 1) + "_arangoDB_" + DB_NAME + ".csv"
     risultati = [["TIPO", "NUMERO QUERY", "TEMPO (ms)"]]
 
     db = connessione(uri, username, password)

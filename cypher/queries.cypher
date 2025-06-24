@@ -6,15 +6,11 @@ RETURN p
 
 // [2]
 MATCH (c:Conto)
-WHERE c.limite_prelievo > 1800
+WHERE (c.tipo_conto = "Investimento" OR c.tipo_conto = "Personale")
+  AND (c.valuta = "USD" OR c.valuta = "EUR")
+  AND c.limite_prelievo > 1000
   AND c.saldo > 45000
-  AND c.valuta <> 'USD'
-SET c._sospetto = true,
-    c._motivi = [
-      'limite_prelievo_alto',
-      'saldo_elevato',
-      'valuta_non_USD'
-    ]
+  AND date(c.data_apertura) >= date() - duration('P13M')
 RETURN c
 
 // [3]
