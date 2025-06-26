@@ -5,7 +5,7 @@ FILTER p.eta >= 25 AND p.eta <= 50
     AND (STARTS_WITH(p.nome, "A") OR STARTS_WITH(p.nome, "M"))
 RETURN p
 
-// [2] Conti Investimento o Personali con valuta EUR o USD con limite prelievo > 1000, saldo > 45000 e aperti da meno di 13 mesi
+// [2] Cercare tutti i conti Investimento o Personali con valuta EUR o USD con limite prelievo > 1000, saldo > 45000 e aperti da meno di 13 mesi (possibili conti a rischio frode).
 FOR c IN Conto
   FILTER (c.tipo_conto == "Investimento" OR c.tipo_conto == "Personale")
     AND (c.valuta == "USD" OR c.valuta == "EUR")
@@ -14,7 +14,7 @@ FOR c IN Conto
     AND c.data_apertura >= DATE_SUBTRACT(DATE_NOW(), 13, "month")
   RETURN c
 
-// [3]
+// [3] Cercare conti correnti collegati a persone appartenenti alla nazione Fiji che possiedono carte d’identit`a sospette (stesso numero, emesse da enti diversi).
 // Prima calcoliamo i numeri sospetti (carte con più enti emittenti)
 LET numeriSospetti = (
   FOR c IN CartaIdentita
@@ -40,7 +40,8 @@ FOR c IN CartaIdentita
     FOR conto IN OUTBOUND persona HA_CONTO
       RETURN conto
 
-// [4] Cercare le persone che sono state coinvolte in almeno 13 transazioni nell'arco di 1 mese per tutti i conti bancari associati a quella persona e mostrare la carta d’identità e la nazione.
+// [4] Cercare persone che hanno effettuato pi`u di 13 transazioni in uscita nell’ultimo mese.
+
 // Convertiamo le date nel formato stringa YYYY-MM-DD per il confronto
 LET unMeseFaStr = DATE_FORMAT(DATE_SUBTRACT(DATE_NOW(), 1, "month"), "%yyyy-%mm-%dd")
 LET oggiStr = DATE_FORMAT(DATE_NOW(), "%yyyy-%mm-%dd")
@@ -53,8 +54,7 @@ FOR persona IN Persona
       FOR transazione IN TRANSAZIONE
         FILTER transazione._from == ha_conto._to
           AND transazione.data >= unMeseFaStr
-          AND transazione.data <= oggiStr  // Aggiunto limite superiore
-        // Rimosso LIMIT 14 per conteggio accurato
+          AND transazione.data <= oggiStr
         RETURN 1
   )
 
@@ -69,7 +69,7 @@ FOR persona IN Persona
         RETURN cartaIdentita
   )
 
-  // Recupera la nazione (primo match)
+  // Recupera la nazione (primo match) - lasciato invariato ma ancora non usato
   LET nazione = FIRST(
     FOR appartiene IN APPARTIENE_A
       FILTER appartiene._from == persona._id
@@ -84,5 +84,6 @@ FOR persona IN Persona
       cognome: persona.cognome,
       codice_fiscale: persona.codice_fiscale,
       uuid: persona.uuid
-      }
+    },
+    numero_carta_identita: carta.numero
   }

@@ -56,8 +56,6 @@ FOR c IN CartaIdentita
 """,
 
 """
-// Cercare le persone che sono state coinvolte in almeno 13 transazioni nell'arco di 1 mese per tutti i conti bancari associati a quella persona e mostrare la carta d’identità e la nazione.
-// Convertiamo le date nel formato stringa YYYY-MM-DD per il confronto
 LET unMeseFaStr = DATE_FORMAT(DATE_SUBTRACT(DATE_NOW(), 1, "month"), "%yyyy-%mm-%dd")
 LET oggiStr = DATE_FORMAT(DATE_NOW(), "%yyyy-%mm-%dd")
 
@@ -69,8 +67,7 @@ FOR persona IN Persona
       FOR transazione IN TRANSAZIONE
         FILTER transazione._from == ha_conto._to
           AND transazione.data >= unMeseFaStr
-          AND transazione.data <= oggiStr  // Aggiunto limite superiore
-        // Rimosso LIMIT 14 per conteggio accurato
+          AND transazione.data <= oggiStr
         RETURN 1
   )
 
@@ -85,7 +82,7 @@ FOR persona IN Persona
         RETURN cartaIdentita
   )
 
-  // Recupera la nazione (primo match)
+  // Recupera la nazione (primo match) - lasciato invariato ma ancora non usato
   LET nazione = FIRST(
     FOR appartiene IN APPARTIENE_A
       FILTER appartiene._from == persona._id
@@ -100,7 +97,8 @@ FOR persona IN Persona
       cognome: persona.cognome,
       codice_fiscale: persona.codice_fiscale,
       uuid: persona.uuid
-      }
+    },
+    numero_carta_identita: carta.numero
   }
 """
 ]

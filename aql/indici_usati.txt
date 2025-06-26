@@ -1,7 +1,0 @@
-// Indice composto su eta e nome
-// La potenza degli indici su arangoDB e' enorme, infatti il primo indice permette di mantenere una media virtualmente simile su tutti e 4 i dataset per la prima query  
-db.Persona.ensureIndex({type: "persistent", fields: ["eta", "nome"], name: "idx_persona_eta_nome"});
-
-// Indice composto su _from e data per la quarta query
-// Questo indice ha permesso di diminuire di circa il 70% il tempo di esecuzione sulla quarta query
-db.TRANSAZIONE.ensureIndex({type: "persistent", fields: ["_from", "data"], name: "idx_from_data"});

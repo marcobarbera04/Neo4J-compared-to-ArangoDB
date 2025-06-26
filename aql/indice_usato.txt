@@ -1,0 +1,3 @@
+// Indice composto su _from e data per la quarta query
+// Questo indice ha permesso di diminuire di circa il 70% il tempo di esecuzione sulla quarta query (dataset 100%)
+db.TRANSAZIONE.ensureIndex({type: "persistent", fields: ["_from", "data"], name: "idx_from_data"});
