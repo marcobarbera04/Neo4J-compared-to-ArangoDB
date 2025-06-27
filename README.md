@@ -15,5 +15,3 @@ docker-compose -p neo4j-arangodb -f docker-compose.yml up -d
 ## Access the databases
 
 ArangoDB: localhost:8529
-
-Neo4j: localhost:7474
