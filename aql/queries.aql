@@ -14,7 +14,7 @@ FOR c IN Conto
     AND c.data_apertura >= DATE_SUBTRACT(DATE_NOW(), 13, "month")
   RETURN c
 
-// [3] Cercare conti correnti collegati a persone appartenenti alla nazione Fiji che possiedono carte d’identit`a sospette (stesso numero, emesse da enti diversi).
+// [3] Cercare conti correnti collegati a persone appartenenti alla nazione Fiji carta d’identita con stesso numero di un'altra carta ma emesse da enti diversi.
 // Prima calcoliamo i numeri sospetti (carte con più enti emittenti)
 LET numeriSospetti = (
   FOR c IN CartaIdentita
@@ -22,10 +22,8 @@ LET numeriSospetti = (
     FILTER COUNT_DISTINCT(carte[*].c.ente_emittente) > 1
     RETURN numero
 )
-
 // Poi troviamo le nazioni target (Fiji)
 LET targetNazioni = (FOR n IN Nazione FILTER n.nome == "Fiji" RETURN n._id)
-
 // Infine eseguiamo la query principale
 FOR c IN CartaIdentita
   FILTER c.numero IN numeriSospetti
@@ -41,11 +39,9 @@ FOR c IN CartaIdentita
       RETURN conto
 
 // [4] Cercare persone che hanno effettuato pi`u di 13 transazioni in uscita nell’ultimo mese.
-
 // Convertiamo le date nel formato stringa YYYY-MM-DD per il confronto
 LET unMeseFaStr = DATE_FORMAT(DATE_SUBTRACT(DATE_NOW(), 1, "month"), "%yyyy-%mm-%dd")
 LET oggiStr = DATE_FORMAT(DATE_NOW(), "%yyyy-%mm-%dd")
-
 FOR persona IN Persona
   // Conta le transazioni recenti in uscita da tutti i conti della persona
   LET transazioniRecentiCount = LENGTH(
@@ -57,9 +53,7 @@ FOR persona IN Persona
           AND transazione.data <= oggiStr
         RETURN 1
   )
-
   FILTER transazioniRecentiCount > 13
-
   // Recupera la carta d'identità (primo match)
   LET carta = FIRST(
     FOR ha_carta IN HA_CARTA
@@ -68,7 +62,6 @@ FOR persona IN Persona
         FILTER cartaIdentita._id == ha_carta._to
         RETURN cartaIdentita
   )
-
   // Recupera la nazione (primo match) - lasciato invariato ma ancora non usato
   LET nazione = FIRST(
     FOR appartiene IN APPARTIENE_A
@@ -77,7 +70,6 @@ FOR persona IN Persona
         FILTER n._id == appartiene._to
         RETURN n
   )
-
   RETURN {
     persona: {
       nome: persona.nome,
