@@ -12,9 +12,12 @@ PASSWORD = "database"
 queries = [
 """
 MATCH (p:Persona)
-WHERE p.eta >= 25 AND p.eta <= 50
-  AND (p.nome STARTS WITH 'A' OR p.nome STARTS WITH 'M')
-RETURN p  
+WHERE 
+  p.eta > 20 AND p.eta < 25
+  AND 
+  (p.nome =~ '^M.*o$' OR p.cognome =~ '^R.*i$')
+  AND p.codice_fiscale STARTS WITH 'M'
+RETURN p
 """,
 
 """

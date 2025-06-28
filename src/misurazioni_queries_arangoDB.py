@@ -6,14 +6,17 @@ from arango import ArangoClient
 # Configurazione ArangoDB
 USER = 'root'
 PASSWORD = 'secret'
-DB_NAME = ''
+DB_NAME = 'database100'
 URI = "http://127.0.0.1:8529"
 
 queries = [
 """
 FOR p IN Persona
-FILTER p.eta >= 25 AND p.eta <= 50
-    AND (STARTS_WITH(p.nome, "A") OR STARTS_WITH(p.nome, "M"))
+FILTER 
+  p.eta > 20 AND p.eta < 25
+  AND 
+  (REGEX_TEST(p.nome, '^M.*o$') OR REGEX_TEST(p.cognome, '^R.*i$'))
+  AND STARTS_WITH(p.codice_fiscale, 'M')
 RETURN p
 """,
 

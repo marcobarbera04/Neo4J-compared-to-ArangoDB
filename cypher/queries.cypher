@@ -1,7 +1,10 @@
-// [1] Cercare persone tra 25 e 50 anni il quale nome inizia con 'A' o 'M' (Know your customer)
+// [1] Cercare persone tra 25 e 50 anni il quale nome inizia con 'M' e finisce con 'o', cognome che inizia con 'R' e finisce con 'i', e codice fiscale che inizia con 'M' 
 MATCH (p:Persona)
-WHERE p.eta >= 25 AND p.eta <= 50
-  AND (p.nome STARTS WITH 'A' OR p.nome STARTS WITH 'M')
+WHERE 
+  p.eta > 20 AND p.eta < 25
+  AND 
+  (p.nome =~ '^M.*o$' OR p.cognome =~ '^R.*i$')
+  AND p.codice_fiscale STARTS WITH 'M'
 RETURN p
 
 // [2] Cercare tutti i conti Investimento o Personali con valuta EUR o USD con limite prelievo > 1000, saldo > 45000 e aperti da meno di 13 mesi (possibili conti a rischio frode).
